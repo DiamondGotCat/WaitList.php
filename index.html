@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Waitlist-S</title>
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #app { 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #f5f7fa;
+            border-right: 1px solid #ebeef5;
+            padding: 80px 20px 20px 20px; /* 上部に80pxのパディングを追加 */
+            box-sizing: border-box;
+            transition: transform 0.3s ease, background-color 0.3s, border-color 0.3s;
+            transform: translateX(0);
+            position: relative;
+            z-index: 1000; /* ハンバーガーメニューより低く設定 */
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .sidebar.dark-mode {
+            background-color: #1e1e1e;
+            border-right: 1px solid #333;
+        }
+        .tabs {
+            display: flex;
+            flex-direction: column;
+        }
+        .tab {
+            margin-bottom: 10px;
+        }
+        .tab button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: transparent;
+            text-align: left;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab button.active {
+            background-color: #409eff;
+            color: white;
+            border-radius: 4px;
+        }
+        .tab button.dark-mode-active {
+            background-color: #409eff;
+            color: white;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            transition: margin-left 0.3s ease, background-color 0.3s, color 0.3s;
+            margin-left: 0;
+        }
+        .content.expanded {
+            margin-left: 0;
+        }
+        .content.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        /* ダークモード用のスタイル */
+        body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        body.dark-mode .sidebar {
+            background-color: #1e1e1e;
+            border-right: 1px solid #333;
+        }
+        body.dark-mode .tab button {
+            color: #ffffff;
+        }
+        body.dark-mode .tab button.active,
+        body.dark-mode .tab button.dark-mode-active {
+            background-color: #409eff;
+            color: white;
+        }
+        body.dark-mode .content {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        /* トグルボタンのスタイル */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+        /* サイドバートグルボタンのスタイル */
+        .sidebar-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1002; /* ハンバーガーメニューがサイドバーのボタンより上に表示されるように調整 */
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: #409eff;
+            transition: color 0.3s;
+        }
+        .sidebar-toggle.dark-mode {
+            color: #ffffff;
+        }
+        .sidebar-toggle:hover {
+            color: #2a7bd9;
+        }
+        /* Element Plus ダークモード対応 */
+        body.dark-mode .el-button--primary {
+            background-color: #409eff;
+            border-color: #409eff;
+        }
+        body.dark-mode .el-button--danger {
+            background-color: #f56c6c;
+            border-color: #f56c6c;
+        }
+        body.dark-mode .el-dialog__body {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        body.dark-mode .el-table {
+            background-color: #1e1e1e;
+        }
+        body.dark-mode .el-table th,
+        body.dark-mode .el-table td {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border-color: #333;
+        }
+        body.dark-mode .el-empty__description {
+            color: #aaaaaa;
+        }
+        /* ホバー時の背景色修正 */
+        .tab button:hover {
+            background-color: #dcdfe6;
+        }
+        body.dark-mode .tab button:hover {
+            background-color: #333;
+        }
+        .el-button:hover {
+            opacity: 0.9;
+        }
+        /* 時刻選択ダイアログのスタイル */
+        .time-picker-dialog .el-time-picker,
+        .date-time-picker-dialog .el-date-picker,
+        .date-time-picker-dialog .el-time-picker {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        /* テーブル行のホバー背景色修正 */
+        /* ライトモード */
+        .el-table .el-table__row:hover {
+            background-color: #f5f5f5 !important;
+        }
+        /* ダークモード */
+        body.dark-mode .el-table .el-table__row:hover {
+            background-color: #333333 !important;
+        }
+        /* レスポンシブデザイン */
+        @media (max-width: 768px) {
+            #app {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #ebeef5;
+                padding: 80px 20px 20px 20px; /* 上部のパディングを維持 */
+                transform: translateY(0);
+            }
+            .sidebar.hidden {
+                transform: translateY(-100%);
+            }
+            .tabs {
+                flex-direction: row;
+            }
+            .tab button {
+                flex: 1;
+                text-align: center;
+            }
+            .sidebar-toggle {
+                left: 10px;
+                top: 10px;
+            }
+            .dark-mode-toggle {
+                right: 10px;
+                top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- サイドバートグルボタン -->
+        <button 
+            class="sidebar-toggle" 
+            :class="{ 'dark-mode': isDarkMode }" 
+            @click="toggleSidebar" 
+            aria-label="サイドバーの表示/非表示">
+            &#9776;
+        </button>
+
+        <!-- ダークモード切り替えボタン -->
+        <div class="dark-mode-toggle">
+            <el-switch 
+                v-model="isDarkMode" 
+                active-text="ダークモード (BETA)" 
+                inactive-text="ライトモード" 
+                @change="toggleDarkMode">
+            </el-switch>
+        </div>
+
+        <!-- サイドバー（カスタムタブ） -->
+        <div 
+            :class="['sidebar', { 'dark-mode': isDarkMode, 'hidden': !isSidebarVisible }]">
+            <div class="tabs">
+                <div class="tab">
+                    <button 
+                        :class="['tab-button', { 'active': currentTab === 'list', 'dark-mode-active': isDarkMode && currentTab === 'list' }]"
+                        @click="changeTab('list')">
+                        LIST
+                    </button>
+                </div>
+                <div class="tab">
+                    <button 
+                        :class="['tab-button', { 'active': currentTab === 'my', 'dark-mode-active': isDarkMode && currentTab === 'my' }]"
+                        @click="changeTab('my')">
+                        MY
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- コンテンツエリア -->
+        <div 
+            :class="['content', { 'dark-mode': isDarkMode, 'expanded': !isSidebarVisible }]">
+            <!-- LIST タブの内容 -->
+            <div v-if="currentTab === 'list'">
+                <h2>場所一覧</h2>
+                <div class="table-container">
+                    <el-table :data="stalls" style="width: 100%">
+                        <el-table-column prop="name" label="屋台名" width="180"></el-table-column>
+                        <el-table-column prop="waiting" label="待ち人数" width="120"></el-table-column>
+                        <el-table-column label="アクション" width="300">
+                            <template #default="scope">
+                                <el-button type="primary" size="mini" @click="reserveNow(scope.row.id)">今すぐ予約</el-button>
+                                <el-button type="warning" size="mini" @click="reserveLater(scope.row.id)">後で予約</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+
+            <!-- MY タブの内容 -->
+            <div v-if="currentTab === 'my'">
+                <h2>マイ予約一覧</h2>
+                <div class="table-container" v-if="myReservations.length > 0">
+                    <el-table :data="myReservations" style="width: 100%">
+                        <el-table-column prop="id" label="予約ID" width="100"></el-table-column>
+                        <el-table-column prop="stall_id" label="屋台名" width="180">
+                            <template #default="scope">
+                                {{ getStallName(scope.row.stall_id) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="status" label="ステータス" width="120"></el-table-column>
+                        <el-table-column label="アクション" width="180">
+                            <template #default="scope">
+                                <el-button 
+                                    v-if="scope.row.status === 'waiting'" 
+                                    type="success" 
+                                    size="mini" 
+                                    @click="completeReservation(scope.row.id)">
+                                    完了
+                                </el-button>
+                                <el-button 
+                                    v-if="scope.row.status === 'waiting'" 
+                                    type="danger" 
+                                    size="mini" 
+                                    @click="cancelReservation(scope.row.id)">
+                                    キャンセル
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+                <el-empty v-else description="予約がありません" />
+            </div>
+        </div>
+
+        <!-- 後で予約用の日時選択ダイアログ -->
+        <el-dialog
+            v-model="dateTimePickerDialog.show"
+            title="後で予約する"
+            width="30%"
+            @close="handleDateTimePickerClose">
+            <el-date-picker
+                v-model="dateTimePickerDialog.date"
+                type="date"
+                placeholder="日付を選択"
+                :picker-options="datePickerOptions"
+                style="width: 100%; margin-bottom: 10px;">
+            </el-date-picker>
+            <el-time-picker
+                v-model="dateTimePickerDialog.time"
+                placeholder="時刻を選択"
+                format="HH:mm"
+                :picker-options="timePickerOptions"
+                style="width: 100%;">
+            </el-time-picker>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dateTimePickerDialog.show = false">キャンセル</el-button>
+                    <el-button type="primary" @click="confirmReserveLater">予約する</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- Element Plus Dialog -->
+        <el-dialog 
+            v-model="dialog.show" 
+            :title="dialog.title" 
+            @close="handleDialogClose">
+            <span>{{ dialog.message }}</span>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialog.show = false">キャンセル</el-button>
+                    <el-button type="primary" @click="handleConfirm">確認</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- Element Plus Loadingは削除 -->
+
+    </div>
+
+    <!-- Vue.js CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Element Plus JavaScript -->
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <script>
+        const { createApp } = Vue;
+        const { ElTable, ElTableColumn, ElButton, ElDialog, ElEmpty, ElLoading, ElSwitch, ElMessage, ElDatePicker, ElTimePicker } = ElementPlus;
+
+        createApp({
+            components: {
+                'el-table': ElTable,
+                'el-table-column': ElTableColumn,
+                'el-button': ElButton,
+                'el-dialog': ElDialog,
+                'el-empty': ElEmpty,
+                'el-date-picker': ElDatePicker,
+                'el-time-picker': ElTimePicker,
+            },
+            data() {
+                return {
+                    currentTab: 'list',
+                    stalls: [],
+                    myReservations: [],
+                    uuid: '',
+                    dialog: { show: false, title: '確認', message: '' },
+                    dateTimePickerDialog: { show: false, date: '', time: '', stall_id: null },
+                    loadingInstance: null, // ローディングインスタンス
+                    pendingAction: null, // 保存するアクションの種類とID
+                    isDarkMode: false, // ダークモードの状態
+                    isSidebarVisible: true, // サイドバーの表示状態
+                    datePickerOptions: {
+                        disabledDate(time) {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return time.getTime() < today.getTime(); // 今日以前の日付を無効化
+                        }
+                    },
+                    timePickerOptions: {
+                        selectableRange: '08:00:00 - 22:00:00',
+                    },
+                }
+            },
+            methods: {
+                // タブの切り替え
+                changeTab(tabName) {
+                    console.log('Changing tab to:', tabName); // デバッグ用
+                    this.currentTab = tabName;
+                },
+                // サイドバーの表示/非表示を切り替え
+                toggleSidebar() {
+                    console.log('Toggling sidebar visibility'); // デバッグ用
+                    this.isSidebarVisible = !this.isSidebarVisible;
+                },
+                // UUIDの生成
+                generateUUID() {
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                },
+                // CookieからUUIDを取得または生成
+                getUUID() {
+                    const name = "waitlist_uuid=";
+                    const decodedCookie = decodeURIComponent(document.cookie);
+                    const ca = decodedCookie.split(';');
+                    for(let i = 0; i < ca.length; i++) {
+                        let c = ca[i];
+                        while (c.charAt(0) === ' ') {
+                            c = c.substring(1);
+                        }
+                        if (c.indexOf(name) === 0) {
+                            return c.substring(name.length, c.length);
+                        }
+                    }
+                    const newUUID = this.generateUUID();
+                    document.cookie = "waitlist_uuid=" + newUUID + "; path=/";
+                    return newUUID;
+                },
+                // API呼び出し
+                api(action, params = {}) {
+                    const url = new URL('./api.php', window.location.href);
+                    url.searchParams.append('action', action);
+                    url.searchParams.append('uuid', this.uuid);
+                    for (const key in params) {
+                        url.searchParams.append(key, params[key]);
+                    }
+                    console.log('API Request URL:', url.toString()); // デバッグ用
+                    return fetch(url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('ネットワークの問題が発生しました');
+                            }
+                            return response.json();
+                        });
+                },
+                // 屋台一覧の取得
+                fetchStalls() {
+                    console.log('Fetching stalls'); // デバッグ用
+                    // ローディング開始
+                    this.loadingInstance = ElLoading.service({
+                        lock: true,
+                        text: '読み込み中...',
+                        fullscreen: true,
+                    });
+
+                    this.api('getStalls').then(data => {
+                        if (data.stalls) {
+                            this.stalls = data.stalls.map(stall => ({
+                                ...stall,
+                                waiting: this.calculateWaiting(stall)
+                            }));
+                        }
+                        // ローディング終了
+                        if (this.loadingInstance) {
+                            this.loadingInstance.close();
+                        }
+                        console.log('Stalls fetched:', this.stalls); // デバッグ用
+                    }).catch((error) => {
+                        this.showMessage('データの取得に失敗しました: ' + error.message, 'error');
+                        // ローディング終了
+                        if (this.loadingInstance) {
+                            this.loadingInstance.close();
+                        }
+                    });
+                },
+                // マイ予約の取得
+                fetchMyReservations() {
+                    console.log('Fetching my reservations'); // デバッグ用
+                    // ローディング開始
+                    this.loadingInstance = ElLoading.service({
+                        lock: true,
+                        text: '読み込み中...',
+                        fullscreen: true,
+                    });
+
+                    this.api('getMyReservations').then(data => {
+                        if (data.reservations) {
+                            this.myReservations = data.reservations;
+                        }
+                        // ローディング終了
+                        if (this.loadingInstance) {
+                            this.loadingInstance.close();
+                        }
+                        console.log('My reservations fetched:', this.myReservations); // デバッグ用
+                    }).catch((error) => {
+                        this.showMessage('予約の取得に失敗しました: ' + error.message, 'error');
+                        // ローディング終了
+                        if (this.loadingInstance) {
+                            this.loadingInstance.close();
+                        }
+                    });
+                },
+                // 今すぐ予約ボタンのクリックハンドラー
+                reserveNow(stall_id) {
+                    console.log('Reserve Now Clicked:', stall_id); // デバッグ用
+                    this.api('addReservationNow', { stall_id }).then(data => {
+                        if (data.success) {
+                            this.showMessage('今すぐの予約が完了しました', 'success');
+                            this.fetchStalls();
+                            this.fetchMyReservations();
+                        } else {
+                            this.showMessage(data.error, 'error');
+                        }
+                    }).catch((error) => {
+                        this.showMessage('今すぐの予約に失敗しました: ' + error.message, 'error');
+                    });
+                },
+                // 後で予約ボタンのクリックハンドラー
+                reserveLater(stall_id) {
+                    console.log('Reserve Later Clicked:', stall_id); // デバッグ用
+                    this.dateTimePickerDialog.stall_id = stall_id;
+                    this.dateTimePickerDialog.show = true;
+                },
+                // 後で予約ダイアログの確認ボタンハンドラー
+                confirmReserveLater() {
+                    const selectedDate = this.dateTimePickerDialog.date;
+                    const selectedTime = this.dateTimePickerDialog.time;
+                    const stall_id = this.dateTimePickerDialog.stall_id;
+
+                    console.log('Confirm Reserve Later:', selectedDate, selectedTime, stall_id); // デバッグ用
+
+                    if (!selectedDate || !selectedTime) {
+                        this.showMessage('日付と時刻を選択してください', 'warning');
+                        return;
+                    }
+
+                    const reservationDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+                    const now = new Date();
+
+                    if (reservationDateTime < now) {
+                        this.showMessage('選択した日時は過去です。', 'warning');
+                        return;
+                    }
+
+                    this.api('addReservationLater', { stall_id, date: selectedDate, time: selectedTime }).then(data => {
+                        if (data.success) {
+                            this.showMessage('後での予約が完了しました', 'success');
+                            this.fetchStalls();
+                            this.fetchMyReservations();
+                        } else {
+                            this.showMessage(data.error, 'error');
+                        }
+                    }).catch((error) => {
+                        this.showMessage('後での予約に失敗しました: ' + error.message, 'error');
+                    });
+
+                    // ダイアログを閉じて入力をリセット
+                    this.dateTimePickerDialog.show = false;
+                    this.dateTimePickerDialog.date = '';
+                    this.dateTimePickerDialog.time = '';
+                    this.dateTimePickerDialog.stall_id = null;
+                },
+                // 予約の完了
+                completeReservation(reservation_id) {
+                    console.log('Complete Reservation:', reservation_id); // デバッグ用
+                    this.pendingAction = { type: 'complete', id: reservation_id };
+                    this.dialog.message = '予約を完了しますか？';
+                    this.dialog.show = true;
+                },
+                // 予約のキャンセル
+                cancelReservation(reservation_id) {
+                    console.log('Cancel Reservation:', reservation_id); // デバッグ用
+                    this.pendingAction = { type: 'cancel', id: reservation_id };
+                    this.dialog.message = '予約をキャンセルしますか？';
+                    this.dialog.show = true;
+                },
+                // ダイアログの確認ボタンが押されたときの処理
+                handleConfirm() {
+                    if (!this.pendingAction) return;
+
+                    const { type, id } = this.pendingAction;
+                    console.log('Handle Confirm Action:', type, id); // デバッグ用
+
+                    if (type === 'complete') {
+                        this.api('completeReservation', { reservation_id: id }).then(data => {
+                            if (data.success) {
+                                this.showMessage('予約が完了しました', 'success');
+                                // ページを再読み込みする
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1000); // 1秒後に再読み込み
+                            } else {
+                                this.showMessage(data.error, 'error');
+                            }
+                        }).catch((error) => {
+                            this.showMessage('予約の完了に失敗しました: ' + error.message, 'error');
+                        });
+                    } else if (type === 'cancel') {
+                        this.api('cancelReservation', { reservation_id: id }).then(data => {
+                            if (data.success) {
+                                this.showMessage('予約がキャンセルされました', 'success');
+                                // ページを再読み込みする
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1000); // 1秒後に再読み込み
+                            } else {
+                                this.showMessage(data.error, 'error');
+                            }
+                        }).catch((error) => {
+                            this.showMessage('予約のキャンセルに失敗しました: ' + error.message, 'error');
+                        });
+                    }
+
+                    // ダイアログを閉じる
+                    this.dialog.show = false;
+                    this.pendingAction = null;
+                },
+                // ダイアログの閉鎖時の処理
+                handleDialogClose(done) {
+                    done();
+                    this.pendingAction = null;
+                },
+                // 後で予約ダイアログの閉鎖時の処理
+                handleDateTimePickerClose(done) {
+                    done();
+                    this.dateTimePickerDialog.show = false;
+                    this.dateTimePickerDialog.date = '';
+                    this.dateTimePickerDialog.time = '';
+                    this.dateTimePickerDialog.stall_id = null;
+                },
+                // 屋台IDから名前を取得
+                getStallName(stall_id) {
+                    const stall = this.stalls.find(s => s.id === stall_id);
+                    return stall ? stall.name : 'Unknown';
+                },
+                // 成功・エラーメッセージの表示（Element Plus の ElMessage を使用）
+                showMessage(text, type) {
+                    ElMessage({
+                        message: text,
+                        type: type,
+                        duration: 3000
+                    });
+                },
+                // ダークモードの切り替え
+                toggleDarkMode() {
+                    if (this.isDarkMode) {
+                        document.body.classList.add('dark-mode');
+                        console.log('Dark mode enabled'); // デバッグ用
+                    } else {
+                        document.body.classList.remove('dark-mode');
+                        console.log('Dark mode disabled'); // デバッグ用
+                    }
+                },
+                // 待ち人数の計算（仮定）
+                calculateWaiting(stall) {
+                    const now = new Date();
+                    let count = 0;
+                    stall.reservations.forEach(reservation => {
+                        if (reservation.type === 'now') {
+                            count += 1;
+                        } else if (reservation.type === 'later') {
+                            const reservationDateTime = new Date(`${reservation.date}T${reservation.time}:00`);
+                            const diff = (reservationDateTime - now) / 60000; // 分単位
+                            if (diff >= 0 && diff <= 15) { // 現在から15分後まで
+                                count += 1;
+                            }
+                        }
+                    });
+                    return count;
+                },
+            },
+            mounted() {
+                this.uuid = this.getUUID();
+                console.log('User UUID:', this.uuid); // デバッグ用
+                this.fetchStalls();
+                this.fetchMyReservations();
+            }
+        })
+        .use(ElementPlus)
+        .mount('#app');
+    </script>
+</body>
+</html>

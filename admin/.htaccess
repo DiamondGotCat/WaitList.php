@@ -1,5 +1,0 @@
-# Deny access to all files except for login.php, dashboard.php, and logout.php
-<FilesMatch "^(login|dashboard|logout)\.php$">
-    Require all granted
-</FilesMatch>
-Require all denied

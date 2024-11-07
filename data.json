@@ -1,0 +1,10 @@
+{
+    "stalls": [
+        {
+            "id": "1",
+            "name": "Location A",
+            "reservations": [
+            ]
+        }
+    ]
+}
